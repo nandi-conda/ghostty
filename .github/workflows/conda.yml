@@ -119,22 +119,27 @@ jobs:
         if: github.ref == 'refs/heads/main'
         shell: bash
         env:
-          PREFIX_API_KEY: ${{ secrets.PREFIX_API_KEY || secrets.PREFIX_DEV_TOKEN }}
+          TOKEN_PREFIX_API_KEY: ${{ secrets.PREFIX_API_KEY }}
+          TOKEN_PREFIX_DEV_TOKEN: ${{ secrets.PREFIX_DEV_TOKEN }}
         run: |
           shopt -s globstar
-          if [ -z "$PREFIX_API_KEY" ]; then
-            echo "::error::Neither PREFIX_API_KEY nor PREFIX_DEV_TOKEN is available to this job"
-            exit 1
-          fi
-          set +e
-          pixi exec rattler-build upload prefix -c nandi-testing --skip-existing \
-            dist-out/conda/**/ghostty-*.conda 2>&1 | tee /tmp/upload.log
-          rc=${PIPESTATUS[0]}
-          if [ "$rc" -ne 0 ]; then
-            printf '::error title=prefix.dev upload::%s\n' \
+          pkgs=(dist-out/conda/**/ghostty-*.conda)
+          # Try each secret that is set; annotations name the secret, never
+          # its value. GitHub runs bash with pipefail, so the tee keeps the
+          # upload's exit status.
+          for name in TOKEN_PREFIX_API_KEY TOKEN_PREFIX_DEV_TOKEN; do
+            secret=${name#TOKEN_}
+            if [ -z "${!name}" ]; then
+              echo "::warning::$secret is not set for this repository"
+              continue
+            fi
+            if PREFIX_API_KEY=${!name} pixi exec rattler-build upload prefix \
+                -c nandi-testing --skip-existing "${pkgs[@]}" 2>&1 | tee /tmp/upload.log; then
+              echo "Published with $secret: ${pkgs[*]}" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            printf '::error title=prefix.dev upload with %s::%s\n' "$secret" \
               "$(sed 's/\x1b\[[0-9;]*m//g' /tmp/upload.log | tail -n 25 | cut -c1-220 \
                 | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')"
-            exit "$rc"
-          fi
-          set -e
-          echo "Published $(cd dist-out/conda && ls **/ghostty-*.conda)" >> "$GITHUB_STEP_SUMMARY"
+          done
+          exit 1
