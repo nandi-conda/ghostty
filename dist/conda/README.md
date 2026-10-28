@@ -95,11 +95,12 @@ instead of building the file that is already on the channel.
 
 ### Credentials
 
-Publishing uses the organization secret `PREFIX_DEV_TOKEN`, a prefix.dev API
-token with write access to the `nandi-testing` channel. The release workflow
-gives it to setup-pixi (`auth-host`/`auth-token`), which logs pixi in, so the
-CI publish step relies on the org secret and never exports the token itself.
-Reading a private channel needs the same token.
+Publishing uses a prefix.dev API token with write access to the
+`nandi-testing` channel, stored as the secret `PREFIX_DEV_TOKEN` (or
+`PREFIX_API_KEY`, the name pixi itself uses). The release workflow gives it to
+setup-pixi (`auth-host`/`auth-token`), which logs pixi in, so the CI publish
+step never exports the token itself. Reading a private channel needs the same
+token.
 
 For a local run, either export `PREFIX_DEV_TOKEN` (`publish.sh` then runs
 `pixi auth login`) or run `pixi auth login https://prefix.dev` once by hand.
@@ -121,10 +122,10 @@ gh workflow run release-tip.yml --repo nandi-conda/ghostty \
 The `runner` input moves `setup`, `appimage-conda` and the AppImage build. The
 macOS and remaining Namespace jobs still queue, so cancel the run once
 `appimage-conda` is green; until then the run holds the `Release Tip`
-concurrency group. `PREFIX_DEV_TOKEN` exists as an organization secret; make
-sure the organization grants it to this repository (all repositories or this
-repository explicitly). `CACHIX_AUTH_TOKEN` may stay unset on the fork, in which
-case cachix skips cache pushes.
+concurrency group. The fork needs the prefix.dev token secret
+(`PREFIX_DEV_TOKEN` or `PREFIX_API_KEY`) granted to this repository (all
+repositories or this repository explicitly). `CACHIX_AUTH_TOKEN` may stay unset
+on the fork, in which case cachix skips cache pushes.
 
 ## Version
 

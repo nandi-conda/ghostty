@@ -31,13 +31,13 @@ jobs:
           else
             echo "present=false" >> "$GITHUB_OUTPUT"
           fi
-      - name: Check PREFIX_DEV_TOKEN
+      - name: Check the prefix.dev token
         id: secret
         env:
-          TOKEN: ${{ secrets.PREFIX_DEV_TOKEN }}
+          TOKEN: ${{ secrets.PREFIX_DEV_TOKEN || secrets.PREFIX_API_KEY }}
         run: |
           if [ -z "$TOKEN" ]; then
-            echo "PREFIX_DEV_TOKEN is not granted to this repository" >&2
+            echo "Neither PREFIX_DEV_TOKEN nor PREFIX_API_KEY is granted to this repository" >&2
             echo "granted=false" >> "$GITHUB_OUTPUT"
           else
             echo "granted=true" >> "$GITHUB_OUTPUT"
@@ -60,6 +60,6 @@ jobs:
           {
             echo "### Bootstrap Conda Publish"
             echo "- channel already has ghostty: ${{ steps.channel.outputs.present }}"
-            echo "- PREFIX_DEV_TOKEN visible to this repository: ${{ steps.secret.outputs.granted }}"
+            echo "- prefix.dev token (PREFIX_DEV_TOKEN or PREFIX_API_KEY) visible: ${{ steps.secret.outputs.granted }}"
             echo "- Release Tip dispatch outcome: ${{ steps.dispatch.outcome }}"
           } >> "$GITHUB_STEP_SUMMARY"
