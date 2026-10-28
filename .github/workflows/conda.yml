@@ -95,15 +95,17 @@ jobs:
               tail -n 200 /tmp/build.log
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
-            # Job logs and step summaries need authentication to read. The
-            # annotations below are visible without a token, and GitHub keeps
-            # only ten per step, so pick the error lines first.
-            {
-              grep -iE 'error|failed|fatal|not found|undefined|traceback' /tmp/build.log | tail -n 6
-              echo '...'
-              tail -n 3 /tmp/build.log
-            } | while IFS= read -r line; do
-              printf '::error::%s\n' "$(printf '%s' "$line" | sed 's/%/%25/g')"
+            # Job logs and step summaries need authentication to read, while
+            # annotations do not. GitHub keeps ten per step, so send the
+            # script output just before rattler-build's own failure banner,
+            # 25 lines per annotation.
+            sed 's/\x1b\[[0-9;]*m//g' /tmp/build.log \
+              | awk '/× error Script failed/ {exit} {print}' \
+              | grep -v '^ *$' | tail -n 200 | cut -c1-220 \
+              | split -l 25 - /tmp/annot.
+            for f in /tmp/annot.*; do
+              printf '::error title=conda build::%s\n' \
+                "$(sed 's/%/%25/g' "$f" | sed ':a;N;$!ba;s/\n/%0A/g')"
             done
           fi
           exit "$rc"
