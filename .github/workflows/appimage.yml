@@ -13,11 +13,6 @@
 # This workflow only builds and uploads a workflow artifact. release-tip.yml
 # publishes the files to the GitHub release and to tip.files.ghostty.org.
 on:
-  # Temporary: run the build on every push to main so a failing build can
-  # report its error through the step summary. Remove with the diagnostic.
-  push:
-    branches: [main]
-
   workflow_call:
     inputs:
       version:
