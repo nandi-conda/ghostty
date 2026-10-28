@@ -1,0 +1,52 @@
+# Temporary bootstrap for the first conda publish on this fork. Remove once
+# nandi-testing has a ghostty package.
+#
+# The fork has no Namespace runners, so a Release Tip dispatch has to name a
+# Depot runner. This workflow dispatches it from a push, because the sandbox
+# that prepares the fork has no GitHub credentials of its own. It does nothing
+# once the channel carries the package, and only ever runs in this fork.
+name: Bootstrap Conda Publish
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  secret:
+    if: github.repository == 'nandi-conda/ghostty'
+    runs-on: ubuntu-latest
+    steps:
+      - name: PREFIX_DEV_TOKEN is available
+        env:
+          TOKEN: ${{ secrets.PREFIX_DEV_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "PREFIX_DEV_TOKEN is not granted to this repository" >&2
+            exit 1
+          fi
+
+  dispatch:
+    needs: secret
+    if: github.repository == 'nandi-conda/ghostty'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the channel
+        id: channel
+        run: |
+          if curl -fsSL https://prefix.dev/channels/nandi-testing | grep -qi ghostty; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Dispatch Release Tip
+        if: steps.channel.outputs.present == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run release-tip.yml \
+            --repo nandi-conda/ghostty \
+            -f runner=depot-ubuntu-24.04-8
