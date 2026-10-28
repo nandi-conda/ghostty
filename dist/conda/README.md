@@ -121,9 +121,10 @@ gh workflow run release-tip.yml --repo nandi-conda/ghostty \
 The `runner` input moves `setup`, `appimage-conda` and the AppImage build. The
 macOS and remaining Namespace jobs still queue, so cancel the run once
 `appimage-conda` is green; until then the run holds the `Release Tip`
-concurrency group. The fork needs `PREFIX_DEV_TOKEN` as a repository secret (an
-organization secret is not required), and may leave `CACHIX_AUTH_TOKEN` unset,
-in which case cachix skips cache pushes.
+concurrency group. `PREFIX_DEV_TOKEN` exists as an organization secret; make
+sure the organization grants it to this repository (all repositories or this
+repository explicitly). `CACHIX_AUTH_TOKEN` may stay unset on the fork, in which
+case cachix skips cache pushes.
 
 ## Version
 
