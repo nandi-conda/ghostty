@@ -68,6 +68,10 @@ env:
   LINUXDEPLOY_SHA256: "c20cd71e3a4e3b80c3483cef793cda3f4e990aca14014d23c544ca3ce1270b4d"
   LINUXDEPLOY_GTK_COMMIT: "7a3fbc31a9e5075073ff8790f26effbac5f84453"
   LINUXDEPLOY_GTK_SHA256: "b0f4cbc684a0103a9651f0955b635eaea0096b3a66c0f5a2c2aa337960375171"
+  # Debian 13 ships blueprint-compiler 0.16, but a Git checkout of Ghostty
+  # needs 0.20 or newer. Same wheel as dist/conda/recipe.yaml.
+  BLUEPRINT_COMPILER_WHEEL_URL: "https://files.pythonhosted.org/packages/14/5c/9f61bc2e82d7970dca4c38b727c4541449bd276660953298795fe0eb84a7/blueprint_compiler-0.22.2-py3-none-any.whl"
+  BLUEPRINT_COMPILER_WHEEL_SHA256: "f6107b34ca21daa209e8e26ce518269e2e332e674da6450ba882ca72d33d2f32"
   GHOSTTY_VERSION: ${{ inputs.version || github.sha }}
   GHOSTTY_VERSION_STRING: ${{ inputs.version-string }}
   CHANNEL_BASE: ${{ inputs.channel-base }}
@@ -97,7 +101,6 @@ jobs:
           apt-get update
           DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
             appstream \
-            blueprint-compiler \
             build-essential \
             bzip2 \
             ca-certificates \
@@ -133,9 +136,19 @@ jobs:
             ncurses-bin \
             pandoc \
             pkg-config \
+            python3-gi \
+            python3-pip \
             wayland-protocols \
             xz-utils \
             zsync
+
+      - name: Install blueprint-compiler
+        run: |
+          whl=/tmp/blueprint_compiler-0.22.2-py3-none-any.whl
+          curl -fsSL -o "$whl" "$BLUEPRINT_COMPILER_WHEEL_URL"
+          echo "${BLUEPRINT_COMPILER_WHEEL_SHA256}  $whl" | sha256sum -c -
+          python3 -m pip install --break-system-packages --no-deps "$whl"
+          blueprint-compiler --version
 
       - name: Install Zig
         run: |
