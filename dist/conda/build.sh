@@ -2,9 +2,10 @@
 # Build the Ghostty GTK app from source and install it into $PREFIX.
 set -euxo pipefail
 
-# blueprint-compiler is not packaged on conda-forge.
-"${BUILD_PREFIX}/bin/python" -m pip install --no-deps --no-build-isolation \
-    "blueprint-compiler>=0.20"
+# blueprint-compiler is not packaged on conda-forge; the recipe downloads
+# its wheel.
+"${BUILD_PREFIX}/bin/python" -m pip install --no-deps --no-index \
+    "${SRC_DIR}"/.wheels/blueprint_compiler-*.whl
 
 export ZIG_GLOBAL_CACHE_DIR="${SRC_DIR}/.zig-global-cache"
 export ZIG_LOCAL_CACHE_DIR="${SRC_DIR}/.zig-local-cache"

@@ -9,8 +9,13 @@ package:
 # Builds the GTK app from this checkout. The AppImage is only for GitHub
 # releases and is not involved here.
 source:
-  path: ../..
-  use_gitignore: true
+  - path: ../..
+    use_gitignore: true
+  # blueprint-compiler is not on conda-forge; build.sh installs this wheel.
+  - url: https://files.pythonhosted.org/packages/14/5c/9f61bc2e82d7970dca4c38b727c4541449bd276660953298795fe0eb84a7/blueprint_compiler-0.22.2-py3-none-any.whl
+    sha256: f6107b34ca21daa209e8e26ce518269e2e332e674da6450ba882ca72d33d2f32
+    file_name: blueprint_compiler-0.22.2-py3-none-any.whl
+    target_directory: .wheels
 
 build:
   # CI sets the build number to the commit count so every publish is a new
@@ -31,9 +36,8 @@ requirements:
     - libxml2
     - ncurses
     - pandoc
-    # blueprint-compiler is not on conda-forge; build.sh installs it from
-    # PyPI into the build environment. It loads the GTK and libadwaita
-    # typelibs through PyGObject.
+    # blueprint-compiler (installed by build.sh) loads the GTK and
+    # libadwaita typelibs through PyGObject.
     - python 3.12.*
     - pip
     - pygobject
