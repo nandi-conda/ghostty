@@ -16,7 +16,7 @@ on:
   workflow_call:
     inputs:
       version:
-        description: "Version string embedded in the AppImage"
+        description: "Version used in the AppImage file name"
         type: string
         required: true
       version-string:
@@ -38,7 +38,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version string embedded in the AppImage"
+        description: "Version used in the AppImage file name"
         type: string
         required: true
       version-string:
