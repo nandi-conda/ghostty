@@ -1,0 +1,99 @@
+context:
+  name: ghostty
+  version: "1.4.1"
+
+package:
+  name: ${{ name }}
+  version: ${{ version }}
+
+source:
+  path: ../..
+
+build:
+  number: 0
+  # Relocate the ELF binaries onto the conda prefix so the package works after
+  # the environment is moved or activated.
+  dynamic_linking:
+    binary_relocation:
+      - if: linux
+        then: "**"
+  script:
+    file: build.sh
+
+requirements:
+  build:
+    # Ghostty pins the exact Zig version in build.zig.zon.
+    - "zig 0.17.0.*"
+    # The Zig build shells out to pandoc for manpages and HTML docs.
+    - pandoc
+    - if: linux
+      then:
+        - ${{ compiler('c') }}
+        - ${{ compiler('cxx') }}
+        - ${{ stdlib('c') }}
+        - pkg-config
+        - gettext
+        - libxml2
+        - gobject-introspection
+        - wayland-protocols
+  host:
+    - if: linux
+      then:
+        # GTK / GUI
+        - gtk4
+        - libadwaita
+        - gtk4-layer-shell
+        - libxkbcommon
+        - wayland
+        - xorg-libx11
+        - xorg-libxcursor
+        - xorg-libxi
+        - xorg-libxrandr
+        - libgl-devel
+        - gst-plugins-base
+        - gst-plugins-good
+        - gstreamer
+        # Libraries linked dynamically by the Zig build.
+        - bzip2
+        - expat
+        - fontconfig
+        - freetype
+        - harfbuzz
+        - libpng
+        - libxml2
+        - oniguruma
+        - zlib
+  run:
+    - if: linux
+      then:
+        # gtk4-layer-shell exports no run export, so list it explicitly.
+        - gtk4-layer-shell
+        # GStreamer is dlopened at runtime for video/audio integrations.
+        - gst-plugins-base
+        - gst-plugins-good
+        - gstreamer
+
+tests:
+  - script:
+      - ghostty --version
+      - ghostty +help
+  - package_contents:
+      bin:
+        - ghostty
+      files:
+        - Menu/ghostty.json
+        - if: linux
+          then:
+            - share/applications/com.mitchellh.ghostty.desktop
+            - share/terminfo/78/xterm-ghostty
+            - share/terminfo/x/xterm-ghostty
+
+about:
+  homepage: https://ghostty.org
+  summary: A fast, native, feature-rich terminal emulator
+  description: |
+    Ghostty is a terminal emulator that differentiates itself by being fast,
+    feature-rich, and native.
+  license: MIT
+  license_file: LICENSE
+  repository: https://github.com/ghostty-org/ghostty
