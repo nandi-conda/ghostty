@@ -13,8 +13,9 @@ Files:
   `.zsync`.
 - `AppRun` — the AppImage entry point.
 
-The CI workflow that publishes the artifacts is
-`.github/workflows/appimage.yml`.
+The CI workflow that builds the AppImage is
+`.github/workflows/appimage.yml`; the rolling ("tip") release workflow,
+`.github/workflows/release-tip.yml`, publishes the artifacts.
 
 ## Artifacts
 
@@ -31,22 +32,35 @@ All four describe the same binary. The two files without a version use a stable
 path, which is what auto-updating depends on:
 
 ```
-https://release.files.ghostty.org/appimage/Ghostty-x86_64.AppImage
-https://release.files.ghostty.org/appimage/Ghostty-x86_64.AppImage.zsync
+https://tip.files.ghostty.org/appimage/Ghostty-x86_64.AppImage
+https://tip.files.ghostty.org/appimage/Ghostty-x86_64.AppImage.zsync
 ```
 
-Tagged releases also publish the versioned pair next to the other release
-artifacts:
+The rolling release also publishes the versioned pair, both as GitHub release
+assets of the `tip` release and under the commit path:
 
 ```
-https://release.files.ghostty.org/VERSION/Ghostty-VERSION-x86_64.AppImage
-https://release.files.ghostty.org/VERSION/Ghostty-VERSION-x86_64.AppImage.zsync
+https://tip.files.ghostty.org/COMMIT/Ghostty-COMMIT-x86_64.AppImage
+https://tip.files.ghostty.org/COMMIT/Ghostty-COMMIT-x86_64.AppImage.zsync
 ```
 
 The versioned AppImage embeds the channel `.zsync` URL, not its own, so a
-versioned download starts updating from the channel as soon as a newer release
-is published. Without a stable URL an installed AppImage would keep pointing at
-the `.zsync` of the release it came from and would never see an update.
+versioned download starts updating from the channel as soon as a newer tip
+build is published. Without a stable URL an installed AppImage would keep
+pointing at the `.zsync` of the build it came from and would never see an
+update.
+
+## Release pipeline
+
+`.github/workflows/appimage.yml` builds in a Debian 13 container on a Depot
+runner. Debian 13 is the oldest distribution with libadwaita 1.7, so the
+AppImage works on glibc 2.41 and newer without raising that requirement.
+
+The build is part of `.github/workflows/release-tip.yml`. That workflow
+publishes the versioned pair as assets of the `tip` GitHub release and under
+`https://tip.files.ghostty.org/COMMIT/`. It writes both channel files to
+`https://tip.files.ghostty.org/appimage/`, uploading the `.zsync` after the
+AppImage so an updater never reads metadata for a file that is not there yet.
 
 ## How auto-updating works
 
@@ -85,7 +99,7 @@ distributions with glibc 2.41 or newer (Debian 13, Ubuntu 25.04 and newer,
 Fedora 42 and newer).
 
 ```sh
-version=1.4.0
+version=$(git rev-parse --short HEAD)
 appdir="$PWD/AppDir"
 
 zig build --prefix "$appdir/usr" \
@@ -96,7 +110,7 @@ zig build --prefix "$appdir/usr" \
 APPIMAGE_EXTRACT_AND_RUN=1 dist/linux/appimage/build-appimage.sh \
   --appdir "$appdir" \
   --version "$version" \
-  --channel-base https://release.files.ghostty.org/appimage \
+  --channel-base https://tip.files.ghostty.org/appimage \
   --output dist-out
 ```
 
@@ -133,7 +147,7 @@ Run it against a downloaded pair:
 
 ```sh
 dist/linux/appimage/verify-zsync.sh \
-  --update-url https://release.files.ghostty.org/appimage/Ghostty-x86_64.AppImage.zsync \
+  --update-url https://tip.files.ghostty.org/appimage/Ghostty-x86_64.AppImage.zsync \
   Ghostty-x86_64.AppImage Ghostty-x86_64.AppImage.zsync
 ```
 
@@ -144,7 +158,7 @@ ok: Ghostty-x86_64.AppImage
   size:      48234496 bytes
   sha1:      8b1a...
   blocksize: 4096
-  update:    zsync|https://release.files.ghostty.org/appimage/Ghostty-x86_64.AppImage.zsync
+  update:    zsync|https://tip.files.ghostty.org/appimage/Ghostty-x86_64.AppImage.zsync
 ```
 
 To do the same checks by hand:
@@ -158,10 +172,10 @@ sha1sum Ghostty-x86_64.AppImage
 
 # 2. The update information is embedded in the AppImage.
 readelf -p .upd_info Ghostty-x86_64.AppImage
-#  [     0]  zsync|https://release.files.ghostty.org/appimage/Ghostty-x86_64.AppImage.zsync
+#  [     0]  zsync|https://tip.files.ghostty.org/appimage/Ghostty-x86_64.AppImage.zsync
 
-# 3. The channel URLs resolve to the same bytes as the versioned release.
-curl -fsSL https://release.files.ghostty.org/appimage/Ghostty-x86_64.AppImage.zsync |
+# 3. The channel and the versioned release describe the same bytes.
+curl -fsSL https://tip.files.ghostty.org/appimage/Ghostty-x86_64.AppImage.zsync |
   grep -E '^(Length|SHA-1):'
 ```
 

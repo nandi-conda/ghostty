@@ -187,8 +187,9 @@ Some notes for packaging the wasm module:
 ## AppImage
 
 The repository builds a self-contained AppImage with zsync-based
-auto-updates. The packaging scripts live in `dist/linux/appimage` and the
-build and publishing workflow is `.github/workflows/appimage.yml`. See
+auto-updates for the rolling ("tip") release. The packaging scripts live in
+`dist/linux/appimage`; `.github/workflows/appimage.yml` builds the AppImage
+and `.github/workflows/release-tip.yml` publishes it. See
 `dist/linux/appimage/README.md` for the artifact layout, how the update
 information works, and how to verify a released AppImage against its
 `.zsync` metadata.

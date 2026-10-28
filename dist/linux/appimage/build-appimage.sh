@@ -135,8 +135,12 @@ rm -f "$output_dir/$versioned" "$output_dir/$versioned.zsync" \
   "$output_dir/$channel" "$output_dir/$channel.zsync"
 
 echo "==> Creating $versioned"
-ARCH="$arch" "$appimagetool" -u "zsync|$channel_zsync_url" \
-  "$appdir" "$output_dir/$versioned"
+# appimagetool writes a .zsync next to the AppImage when update information is
+# given, so run it from the output directory and overwrite that file below.
+(
+  cd "$output_dir"
+  ARCH="$arch" "$appimagetool" -u "zsync|$channel_zsync_url" "$appdir" "$versioned"
+)
 
 # The channel copy is byte-identical, so it shares the embedded update
 # information. appimagetool also creates a .zsync when zsyncmake is installed;

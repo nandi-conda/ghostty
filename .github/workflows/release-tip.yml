@@ -538,6 +538,106 @@ jobs:
           echo "  WASM (ReleaseFast): https://tip.files.ghostty.org/${GHOSTTY_COMMIT_LONG}/ghostty-vt.wasm"
           echo "  WASM (ReleaseSmall): https://tip.files.ghostty.org/${GHOSTTY_COMMIT_LONG}/ghostty-vt-small.wasm"
 
+  build-appimage:
+    needs: [setup]
+    if: |
+      needs.setup.outputs.should_skip != 'true' &&
+      (
+        github.event_name == 'workflow_dispatch' ||
+        (
+          github.repository_owner == 'ghostty-org' &&
+          github.ref_name == 'main'
+        )
+      )
+    uses: ./.github/workflows/appimage.yml
+    with:
+      version: ${{ needs.setup.outputs.commit }}
+
+  appimage:
+    needs: [setup, build-appimage]
+    if: |
+      needs.setup.outputs.should_skip != 'true' &&
+      (
+        github.event_name == 'workflow_dispatch' ||
+        (
+          github.repository_owner == 'ghostty-org' &&
+          github.ref_name == 'main'
+        )
+      )
+    runs-on: namespace-profile-ghostty-sm
+    env:
+      GHOSTTY_COMMIT: ${{ needs.setup.outputs.commit }}
+      GHOSTTY_COMMIT_LONG: ${{ needs.setup.outputs.commit_long }}
+    steps:
+      - name: Download AppImage
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: appimage
+          path: appimage
+
+      # Only the versioned pair becomes a GitHub release asset. The channel
+      # pair keeps a fixed file name and would be replaced on every run.
+      - name: Collect Release Assets
+        run: |
+          mkdir upload
+          mv "appimage/Ghostty-${GHOSTTY_COMMIT}-x86_64.AppImage" upload/
+          mv "appimage/Ghostty-${GHOSTTY_COMMIT}-x86_64.AppImage.zsync" upload/
+
+      - name: Update Release
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        with:
+          name: 'Ghostty Tip ("Nightly")'
+          prerelease: true
+          tag_name: tip
+          target_commitish: ${{ github.sha }}
+          files: |
+            upload/Ghostty-${{ needs.setup.outputs.commit }}-x86_64.AppImage
+            upload/Ghostty-${{ needs.setup.outputs.commit }}-x86_64.AppImage.zsync
+          token: ${{ secrets.GH_RELEASE_TOKEN }}
+
+      - name: Prep R2 Storage
+        run: |
+          mkdir -p "blob/${GHOSTTY_COMMIT_LONG}"
+          cp upload/* "blob/${GHOSTTY_COMMIT_LONG}/"
+          mkdir -p blob/appimage
+          cp appimage/Ghostty-x86_64.AppImage blob/appimage/
+
+      - name: Upload to R2
+        uses: ryand56/r2-upload-action@33ebb7a494b3a8a3c5ed2ea6bbdc72e707090317 # v1.5
+        with:
+          r2-account-id: ${{ secrets.CF_R2_TIP_ACCOUNT_ID }}
+          r2-access-key-id: ${{ secrets.CF_R2_TIP_AWS_KEY }}
+          r2-secret-access-key: ${{ secrets.CF_R2_TIP_SECRET_KEY }}
+          r2-bucket: ghostty-tip
+          source-dir: blob
+          destination-dir: ./
+
+      # Publish the channel zsync last: an updater that reads it must already
+      # find the matching AppImage at the same path.
+      - name: Prep R2 Storage for AppImage zsync
+        run: |
+          rm -rf blob
+          mkdir -p blob/appimage
+          cp appimage/Ghostty-x86_64.AppImage.zsync blob/appimage/
+
+      - name: Upload AppImage zsync to R2
+        uses: ryand56/r2-upload-action@33ebb7a494b3a8a3c5ed2ea6bbdc72e707090317 # v1.5
+        with:
+          r2-account-id: ${{ secrets.CF_R2_TIP_ACCOUNT_ID }}
+          r2-access-key-id: ${{ secrets.CF_R2_TIP_AWS_KEY }}
+          r2-secret-access-key: ${{ secrets.CF_R2_TIP_SECRET_KEY }}
+          r2-bucket: ghostty-tip
+          source-dir: blob
+          destination-dir: ./
+
+      - name: Echo Release URLs
+        run: |
+          echo "Release URLs:"
+          echo "  AppImage: https://tip.files.ghostty.org/${GHOSTTY_COMMIT_LONG}/Ghostty-${GHOSTTY_COMMIT}-x86_64.AppImage"
+          echo "  AppImage zsync: https://tip.files.ghostty.org/${GHOSTTY_COMMIT_LONG}/Ghostty-${GHOSTTY_COMMIT}-x86_64.AppImage.zsync"
+          echo "  AppImage channel: https://tip.files.ghostty.org/appimage/Ghostty-x86_64.AppImage"
+          echo "  AppImage channel zsync: https://tip.files.ghostty.org/appimage/Ghostty-x86_64.AppImage.zsync"
+
   build-macos:
     needs: [setup]
     if: |
