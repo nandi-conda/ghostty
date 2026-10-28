@@ -57,8 +57,13 @@ jobs:
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
             # Job logs and step summaries need authentication to read. The
-            # annotations below are visible without a token.
-            tail -n 15 /tmp/build.log | while IFS= read -r line; do
+            # annotations below are visible without a token, and GitHub keeps
+            # only ten per step, so pick the error lines first.
+            {
+              grep -iE 'error|failed|fatal|not found|undefined|traceback' /tmp/build.log | tail -n 6
+              echo '...'
+              tail -n 3 /tmp/build.log
+            } | while IFS= read -r line; do
               printf '::error::%s\n' "$(printf '%s' "$line" | sed 's/%/%25/g')"
             done
           fi
