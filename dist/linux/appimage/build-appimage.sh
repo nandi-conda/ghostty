@@ -7,7 +7,7 @@
 # the AppImage with:
 #
 #   zig build --prefix "$APPDIR/usr" \
-#     -Doptimize=ReleaseFast -Dcpu=baseline -Dversion-string="$VERSION"
+#     -Doptimize=ReleaseFast -Dcpu=baseline
 #
 # The script bundles shared libraries and GTK data with linuxdeploy, packs the
 # AppImage with appimagetool (embedding zsync update information) and generates
