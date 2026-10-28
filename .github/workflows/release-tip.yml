@@ -10,7 +10,7 @@ on:
         type: number
         required: false
       # Runner label for the Linux jobs that this workflow needs to publish
-      # the AppImage and its conda package. Leave empty for the default
+      # the AppImage. Leave empty for the default
       # Namespace runner. A fork without Namespace runners can pass a Depot
       # label (for example depot-ubuntu-24.04-8) for a publish-only run.
       runner:
@@ -648,48 +648,6 @@ jobs:
           echo "  AppImage zsync: https://tip.files.ghostty.org/${GHOSTTY_COMMIT_LONG}/Ghostty-${GHOSTTY_COMMIT}-x86_64.AppImage.zsync"
           echo "  AppImage channel: https://tip.files.ghostty.org/appimage/Ghostty-x86_64.AppImage"
           echo "  AppImage channel zsync: https://tip.files.ghostty.org/appimage/Ghostty-x86_64.AppImage.zsync"
-
-  # Wrap the AppImage in a conda package with a menuinst shortcut and upload
-  # it to the testing channel on prefix.dev. The package does not rebuild the
-  # app: dist/conda only installs the AppImage that build-appimage produced.
-  # The conda build number is the commit count, so every tip run uploads a new
-  # package file instead of rebuilding the one already on the channel.
-  appimage-conda:
-    needs: [setup, build-appimage]
-    if: |
-      needs.setup.outputs.should_skip != 'true' &&
-      (
-        github.event_name == 'workflow_dispatch' ||
-        (
-          github.repository_owner == 'ghostty-org' &&
-          github.ref_name == 'main'
-        )
-      )
-    runs-on: ${{ github.event.inputs.runner || 'namespace-profile-ghostty-sm' }}
-    env:
-      GHOSTTY_BUILD: ${{ needs.setup.outputs.build }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Download AppImage
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: appimage
-          path: dist/conda/appimage
-
-      # The prefix.dev token secret can be named PREFIX_DEV_TOKEN or
-      # PREFIX_API_KEY; setup-pixi authenticates pixi with it so the publish
-      # step never has to export the token.
-      - uses: prefix-dev/setup-pixi@fef5c9568ca6c4ff7707bf840ab0692ba3f08293 # v0.9.0
-        with:
-          pixi-version: v0.83.0
-          run-install: false
-          auth-host: prefix.dev
-          auth-token: ${{ secrets.PREFIX_API_KEY || secrets.PREFIX_DEV_TOKEN }}
-
-      - name: Publish to prefix.dev
-        run: |
-          dist/conda/publish.sh --build-number "$GHOSTTY_BUILD"
 
   build-macos:
     needs: [setup]

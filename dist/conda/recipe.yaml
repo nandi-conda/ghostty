@@ -6,41 +6,73 @@ package:
   name: ${{ name }}
   version: ${{ version }}
 
-# This recipe does not build Ghostty. It wraps the AppImage that
-# .github/workflows/appimage.yml builds: the release workflow downloads the
-# `appimage` artifact into dist/conda/appimage/ and then runs this recipe.
-# To build locally, put Ghostty-*-x86_64.AppImage in dist/conda/appimage/.
+# Builds the GTK app from this checkout. The AppImage is only for GitHub
+# releases and is not involved here.
 source:
-  - path: appimage
-  # Keep the license text next to the recipe's source so rattler-build can
-  # copy it into the package.
-  - path: ../../LICENSE
+  path: ../..
+  use_gitignore: true
 
 build:
-  # pixi publish's --build-number never reaches rattler-build for recipe-based
-  # packages, so the number comes from the environment. publish.sh sets it
-  # from its own --build-number; CI uses the tip build number (commit count).
+  # CI sets the build number to the commit count so every publish is a new
+  # file on the channel.
   number: ${{ env.get("GHOSTTY_CONDA_BUILD_NUMBER", default="0") }}
+  skip: not linux
   script:
     file: build.sh
+  # Zig fetches the dependencies pinned in build.zig.zon at build time.
+  # Their hashes are pinned there, so the result is still reproducible.
+
+requirements:
+  build:
+    - zig ==0.17.0
+    - pkg-config
+    - gettext
+    - glib-tools
+    - libxml2
+    - ncurses
+    - pandoc
+    # blueprint-compiler is not on conda-forge; build.sh installs it from
+    # PyPI into the build environment. It loads the GTK and libadwaita
+    # typelibs through PyGObject.
+    - python 3.12.*
+    - pip
+    - pygobject
+    - gtk4
+    - libadwaita
+  host:
+    - gtk4
+    - libadwaita
+    - gtk4-layer-shell
+    - glib
+    - wayland
+    - libegl-devel
+    - libgl-devel
+    - fontconfig
+    - xorg-libx11
+  run:
+    - gtk4
+    - libadwaita
+    - gtk4-layer-shell
+    - adwaita-icon-theme
+    - gsettings-desktop-schemas
 
 tests:
   - package_contents:
       bin:
-        - ghostty.AppImage
+        - ghostty
       files:
+        - share/applications/com.mitchellh.ghostty.desktop
         - Menu/ghostty.json
-        - Menu/ghostty.png
   - script:
-      - test -x "$PREFIX/bin/ghostty.AppImage"
+      - ghostty +version
 
 about:
   homepage: https://ghostty.org
   summary: A fast, native, feature-rich terminal emulator
   description: |
     Ghostty is a terminal emulator that differentiates itself by being fast,
-    feature-rich, and native. This package installs the self-contained
-    AppImage and a menuinst shortcut that launches it.
+    feature-rich, and native. This package builds the GTK app from source
+    and adds a menuinst shortcut for it.
   license: MIT
   license_file: LICENSE
   repository: https://github.com/ghostty-org/ghostty

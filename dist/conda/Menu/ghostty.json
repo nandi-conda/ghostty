@@ -7,9 +7,9 @@
             "description": "A fast, native, feature-rich terminal emulator",
             "icon": "{{ MENU_DIR }}/ghostty.{{ ICON_EXT }}",
             "command": [
-                "{{ PREFIX }}/bin/ghostty.AppImage"
+                "{{ PREFIX }}/bin/ghostty"
             ],
-            "activate": false,
+            "activate": true,
             "platforms": {
                 "linux": {
                     "Categories": [
