@@ -183,3 +183,17 @@ Some notes for packaging the wasm module:
   what the module uses, e.g. `--enable-simd --enable-bulk-memory
 --enable-sign-ext --enable-nontrapping-float-to-int --enable-multivalue
 --enable-reference-types`.
+
+## AppImage
+
+The repository builds a self-contained AppImage with zsync-based
+auto-updates. The packaging scripts live in `dist/linux/appimage` and the
+build and publishing workflow is `.github/workflows/appimage.yml`. See
+`dist/linux/appimage/README.md` for the artifact layout, how the update
+information works, and how to verify a released AppImage against its
+`.zsync` metadata.
+
+An AppImage installs the same layout as a system package (`usr/bin/ghostty`
+plus `usr/share/...`), so the build steps above apply unchanged. The
+`zig build` command in that document installs into a prefix; pass the
+AppImage's `AppDir/usr` as the prefix.

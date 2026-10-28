@@ -1,0 +1,24 @@
+#!/bin/sh
+# AppRun for the Ghostty AppImage.
+#
+# linuxdeploy may wrap this script in another AppRun that sources the hooks in
+# apprun-hooks/ first (the GTK plugin installs one). Everything here runs after
+# those hooks have set up the bundled GTK data paths.
+
+set -e
+
+HERE=$(dirname "$(readlink -f "$0")")
+
+export PATH="$HERE/usr/bin:$PATH"
+export LD_LIBRARY_PATH="$HERE/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+
+# Ghostty looks resources up relative to the executable in release builds only
+# when this is set, so set it explicitly. The AppDir layout is
+# usr/bin/ghostty with resources in usr/share/ghostty.
+export GHOSTTY_RESOURCES_DIR="$HERE/usr/share/ghostty"
+
+# The linuxdeploy GTK plugin pins GDK_BACKEND=x11 because some GTK apps cannot
+# start on Wayland. Ghostty supports both backends, so let GTK pick.
+unset GDK_BACKEND
+
+exec "$HERE/usr/bin/ghostty" "$@"
