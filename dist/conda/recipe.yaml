@@ -55,6 +55,9 @@ requirements:
     - libgl-devel
     - fontconfig
     - xorg-libx11
+    # Not run dependencies of GTK, but its .pc files require them.
+    - zlib
+    - expat
   run:
     - gtk4
     - libadwaita
