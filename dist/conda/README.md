@@ -60,23 +60,27 @@ without it (or containers) can run the file with `--appimage-extract-and-run`.
 The testing channel is `nandi-testing` on prefix.dev:
 
 ```sh
-PREFIX_DEV_TOKEN=... dist/conda/publish.sh
+dist/conda/publish.sh
 # or
-PREFIX_DEV_TOKEN=... pixi run publish-appimage-nandi-testing
+pixi run publish-appimage-nandi-testing
 ```
 
-`publish.sh` checks the token and the AppImage, runs
-`pixi auth login https://prefix.dev --token "$PREFIX_DEV_TOKEN"`, then
+`publish.sh` checks for the AppImage, then runs
 `pixi publish --path dist/conda --to https://prefix.dev/nandi-testing`.
 It builds the package first; pass `--build-number` to override the build
 number (CI uses the number of commits, the same number the tip release uses).
 
 ### Credentials
 
-Uploading needs a prefix.dev API token with write access to the `nandi-testing`
-channel, passed as `PREFIX_DEV_TOKEN`. Reading a private channel needs the same
-token. In GitHub Actions it comes from the `PREFIX_DEV_TOKEN` secret. Never
-commit it. `pixi auth status` lists the hosts that have stored credentials.
+Publishing uses the organization secret `PREFIX_DEV_TOKEN`, a prefix.dev API
+token with write access to the `nandi-testing` channel. The release workflow
+gives it to setup-pixi (`auth-host`/`auth-token`), which logs pixi in, so the
+CI publish step relies on the org secret and never exports the token itself.
+Reading a private channel needs the same token.
+
+For a local run, either export `PREFIX_DEV_TOKEN` (`publish.sh` then runs
+`pixi auth login`) or run `pixi auth login https://prefix.dev` once by hand.
+Never commit the token. `pixi auth status` lists the stored hosts.
 
 The channel must already exist and the token must be allowed to write to it;
 prefix.dev does not accept anonymous uploads.

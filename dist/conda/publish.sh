@@ -1,16 +1,13 @@
 #!/usr/bin/env bash
 # Build the AppImage conda package and upload it to prefix.dev/nandi-testing.
 #
-# Requires:
-#   - PREFIX_DEV_TOKEN, a prefix.dev API token with write access to the
-#     nandi-testing channel
-#   - exactly one Ghostty-*-x86_64.AppImage in dist/conda/appimage/
+# Authentication: CI pre-authenticates pixi with the organization secret
+# PREFIX_DEV_TOKEN (setup-pixi `auth-host`/`auth-token`), so nothing is
+# exported here. Locally, either export PREFIX_DEV_TOKEN or run
+# `pixi auth login https://prefix.dev` once.
+#
+# Requires exactly one Ghostty-*-x86_64.AppImage in dist/conda/appimage/.
 set -euo pipefail
-
-if [ -z "${PREFIX_DEV_TOKEN:-}" ]; then
-    echo "error: PREFIX_DEV_TOKEN is not set" >&2
-    exit 2
-fi
 
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
@@ -22,5 +19,8 @@ if [ "${#appimages[@]}" -ne 1 ]; then
     exit 2
 fi
 
-pixi auth login https://prefix.dev --token "$PREFIX_DEV_TOKEN"
+if [ -n "${PREFIX_DEV_TOKEN:-}" ]; then
+    pixi auth login https://prefix.dev --token "$PREFIX_DEV_TOKEN"
+fi
+
 pixi publish --path "$here" --to https://prefix.dev/nandi-testing "$@"

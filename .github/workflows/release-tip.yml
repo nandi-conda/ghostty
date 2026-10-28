@@ -664,14 +664,16 @@ jobs:
           name: appimage
           path: dist/conda/appimage
 
+      # PREFIX_DEV_TOKEN is an organization secret; setup-pixi authenticates
+      # pixi with it so the publish step never has to export the token.
       - uses: prefix-dev/setup-pixi@fef5c9568ca6c4ff7707bf840ab0692ba3f08293 # v0.9.0
         with:
           pixi-version: v0.83.0
           run-install: false
+          auth-host: prefix.dev
+          auth-token: ${{ secrets.PREFIX_DEV_TOKEN }}
 
       - name: Publish to prefix.dev
-        env:
-          PREFIX_DEV_TOKEN: ${{ secrets.PREFIX_DEV_TOKEN }}
         run: |
           dist/conda/publish.sh --build-number "$GHOSTTY_BUILD"
 
