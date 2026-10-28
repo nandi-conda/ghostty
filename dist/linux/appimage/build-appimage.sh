@@ -122,6 +122,11 @@ sed -i 's/^DBusActivatable=.*/DBusActivatable=false/' "$desktop"
 # AppDir root.
 rm -rf "$appdir/AppRun" "$appdir/AppRun.wrapped" "$appdir/apprun-hooks"
 
+# Development files are installed next to the executable but are not needed in
+# a user-facing AppImage.
+rm -rf "$appdir/usr/include"
+find "$appdir/usr/lib" -maxdepth 1 \( -name 'libghostty-vt.so*' -o -name '*.a' \) -delete
+
 echo "==> Bundling shared libraries and GTK data"
 "$linuxdeploy" \
   --appdir "$appdir" \

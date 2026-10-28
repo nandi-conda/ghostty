@@ -25,8 +25,8 @@ Every build produces two pairs of files:
 | --- | --- |
 | `Ghostty-VERSION-x86_64.AppImage` | Versioned AppImage, for direct downloads. |
 | `Ghostty-VERSION-x86_64.AppImage.zsync` | zsync metadata for the versioned file. |
-| `Ghostty-x86_64.AppImage` | Channel AppImage at a version-independent path. Every release overwrites it. |
-| `Ghostty-x86_64.AppImage.zsync` | zsync metadata for the channel file, also overwritten every release. |
+| `Ghostty-x86_64.AppImage` | Channel AppImage at a version-independent path. Every tip build overwrites it. |
+| `Ghostty-x86_64.AppImage.zsync` | zsync metadata for the channel file, also overwritten every tip build. |
 
 All four describe the same binary. The two files without a version use a stable
 path, which is what auto-updating depends on:
@@ -65,8 +65,8 @@ AppImage so an updater never reads metadata for a file that is not there yet.
 ## How auto-updating works
 
 1. `appimagetool -u "zsync|URL"` writes `zsync|URL` into the AppImage's
-   `.upd_info` ELF section before the filesystem is packed. This is the only
-   place an AppImage stores its update source.
+   `.upd_info` ELF section. This is the only place an AppImage stores its
+   update source.
 2. An updater (`appimageupdatetool`, `AppImageUpdate`, or a desktop
    integration such as AppImageLauncher) reads `.upd_info`, downloads
    `URL` (the channel `.zsync` file) and reads its headers:
@@ -83,9 +83,9 @@ Because the `.zsync` is generated from the finished AppImage, any later change
 to the AppImage invalidates it. The build script therefore embeds the update
 information first, builds the AppImage, and only then runs `zsyncmake`.
 
-Servers must support HTTP range requests for deltas to help; without them the
-updater falls back to downloading the whole file. Cloudflare R2 and GitHub
-release assets both support ranges.
+Servers must support HTTP range requests for delta updates to work; without
+them the updater downloads the whole file. Cloudflare R2 and GitHub release
+assets both support ranges.
 
 AppImages are not signed here, so AppImageUpdate reports
 `Validation warning: AppImage not signed` and updates anyway. The SHA-1 check
@@ -132,6 +132,9 @@ usr/share/zsh/site-functions/_ghostty
 usr/share/man/man1/ghostty.1
 ```
 
+CI builds x86_64 only. Adding aarch64 means running the same workflow on an
+arm64 runner; the scripts select the artifact name from `uname -m`.
+
 `build-appimage.sh` sets `DBusActivatable=false` in the desktop file, because
 an AppImage cannot install the D-Bus service file that D-Bus activation needs.
 
@@ -168,7 +171,7 @@ To do the same checks by hand:
 grep -E '^(Length|Blocksize|SHA-1|URL):' Ghostty-x86_64.AppImage.zsync
 stat -c %s Ghostty-x86_64.AppImage
 sha1sum Ghostty-x86_64.AppImage
-# zsyncmake writes SHA-1 as hex; zsync2 writes base64 of the same 20 bytes.
+# zsyncmake writes SHA-1 as 40 hex characters (the whole-file digest).
 
 # 2. The update information is embedded in the AppImage.
 readelf -p .upd_info Ghostty-x86_64.AppImage
