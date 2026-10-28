@@ -12,11 +12,14 @@ set -euxo pipefail
 export ZIG_GLOBAL_CACHE_DIR="${GHOSTTY_ZIG_CACHE:-${SRC_DIR}/.zig-global-cache}"
 export ZIG_LOCAL_CACHE_DIR="${SRC_DIR}/.zig-local-cache"
 export PKG_CONFIG_PATH="${PREFIX}/lib/pkgconfig:${PREFIX}/share/pkgconfig"
-export GI_TYPELIB_PATH="${BUILD_PREFIX}/lib/girepository-1.0"
+export GI_TYPELIB_PATH="${BUILD_PREFIX}/lib/girepository-1.0:${PREFIX}/lib/girepository-1.0"
 
+# No --search-prefix: libraries come through pkg-config. A search prefix would
+# put $PREFIX/include on every C library Zig builds itself, and libxml2 would
+# then pick up GNU libiconv's iconv.h (which renames iconv_open to
+# libiconv_open) without linking libiconv.
 zig build \
     --prefix "${PREFIX}" \
-    --search-prefix "${PREFIX}" \
     -Doptimize=ReleaseFast \
     -Dcpu=baseline \
     -Dinstalled-exe-path="${PREFIX}/bin/ghostty" \
