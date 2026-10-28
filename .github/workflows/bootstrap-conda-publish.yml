@@ -1,10 +1,13 @@
-# Temporary bootstrap for the first conda publish on this fork. Remove once
-# nandi-testing has a ghostty package.
+# Bootstrap for the first conda publish on this fork. Remove once
+# nandi-testing carries a ghostty package.
 #
 # The fork has no Namespace runners, so a Release Tip dispatch has to name a
 # Depot runner. This workflow dispatches it from a push, because the sandbox
-# that prepares the fork has no GitHub credentials of its own. It does nothing
-# once the channel carries the package, and only ever runs in this fork.
+# that prepares the fork has no GitHub credentials of its own.
+#
+# It is inert in every other case: it does nothing once the channel carries
+# ghostty, and it logs and stops while PREFIX_DEV_TOKEN is not granted to this
+# repository, so it never dispatches a build that cannot publish.
 name: Bootstrap Conda Publish
 
 on:
@@ -16,21 +19,7 @@ permissions:
   contents: read
 
 jobs:
-  secret:
-    if: github.repository == 'nandi-conda/ghostty'
-    runs-on: ubuntu-latest
-    steps:
-      - name: PREFIX_DEV_TOKEN is available
-        env:
-          TOKEN: ${{ secrets.PREFIX_DEV_TOKEN }}
-        run: |
-          if [ -z "$TOKEN" ]; then
-            echo "PREFIX_DEV_TOKEN is not granted to this repository" >&2
-            exit 1
-          fi
-
   dispatch:
-    needs: secret
     if: github.repository == 'nandi-conda/ghostty'
     runs-on: ubuntu-latest
     steps:
@@ -42,8 +31,19 @@ jobs:
           else
             echo "present=false" >> "$GITHUB_OUTPUT"
           fi
+      - name: Check PREFIX_DEV_TOKEN
+        id: secret
+        env:
+          TOKEN: ${{ secrets.PREFIX_DEV_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "PREFIX_DEV_TOKEN is not granted to this repository" >&2
+            echo "granted=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "granted=true" >> "$GITHUB_OUTPUT"
+          fi
       - name: Dispatch Release Tip
-        if: steps.channel.outputs.present == 'false'
+        if: steps.channel.outputs.present == 'false' && steps.secret.outputs.granted == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
