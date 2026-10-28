@@ -108,6 +108,23 @@ Never commit the token. `pixi auth status` lists the stored hosts.
 The channel must already exist and the token must be allowed to write to it;
 prefix.dev does not accept anonymous uploads.
 
+### Publishing from a fork
+
+`Release Tip` runs on ghostty-org's Namespace runners by default. A fork can run
+the AppImage and conda jobs on another runner:
+
+```sh
+gh workflow run release-tip.yml --repo nandi-conda/ghostty \
+  -f runner=depot-ubuntu-24.04-8
+```
+
+The `runner` input moves `setup`, `appimage-conda` and the AppImage build. The
+macOS and remaining Namespace jobs still queue, so cancel the run once
+`appimage-conda` is green; until then the run holds the `Release Tip`
+concurrency group. The fork needs `PREFIX_DEV_TOKEN` as a repository secret (an
+organization secret is not required), and may leave `CACHIX_AUTH_TOKEN` unset,
+in which case cachix skips cache pushes.
+
 ## Version
 
 `recipe.yaml` sets `version: "1.4.1"` for the current development tree. Bump
