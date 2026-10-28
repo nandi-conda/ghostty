@@ -13,6 +13,11 @@
 # This workflow only builds and uploads a workflow artifact. release-tip.yml
 # publishes the files to the GitHub release and to tip.files.ghostty.org.
 on:
+  # Temporary: run the build on every push to main so a failing build can
+  # report its error through the step summary. Remove with the diagnostic.
+  push:
+    branches: [main]
+
   workflow_call:
     inputs:
       version:
@@ -157,12 +162,24 @@ jobs:
           echo "/opt/appimage" >> "$GITHUB_PATH"
 
       - name: Build Ghostty
+        shell: bash
         run: |
+          set +e
           zig build \
             --prefix "$APPDIR/usr" \
             -Dversion-string="$GHOSTTY_VERSION" \
             -Doptimize=ReleaseFast \
-            -Dcpu=baseline
+            -Dcpu=baseline > /tmp/build.log 2>&1
+          rc=$?
+          if [ "$rc" -ne 0 ]; then
+            {
+              echo '### Build Ghostty failed'
+              echo '```'
+              tail -n 200 /tmp/build.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$rc"
 
       - name: Build AppImage
         run: |
