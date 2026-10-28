@@ -9,6 +9,13 @@ on:
       pr:
         type: number
         required: false
+      # Runner label for the Linux jobs that this workflow needs to publish
+      # the AppImage and its conda package. Leave empty for the default
+      # Namespace runner. A fork without Namespace runners can pass a Depot
+      # label (for example depot-ubuntu-24.04-8) for a publish-only run.
+      runner:
+        type: string
+        required: false
 
 name: Release Tip
 
@@ -26,7 +33,7 @@ jobs:
         github.repository_owner == 'ghostty-org' &&
         github.ref_name == 'main'
       )
-    runs-on: namespace-profile-ghostty-sm
+    runs-on: ${{ github.event.inputs.runner || 'namespace-profile-ghostty-sm' }}
     outputs:
       should_skip: ${{ steps.check.outputs.should_skip }}
       build: ${{ steps.extract_build_info.outputs.build }}
@@ -37,7 +44,10 @@ jobs:
         with:
           # Important so that build number generation works
           fetch-depth: 0
+      # The Namespace cache action only works on Namespace runners. A
+      # dispatch with a different runner (see the runner input) skips it.
       - name: Setup Cache
+        if: contains(runner.name, 'nsc')
         uses: namespacelabs/nscloud-cache-action@1124a6f3ce44e5cf84cc22111530961f4d2a15f9 # v1.7.0
         with:
           path: |
@@ -552,6 +562,7 @@ jobs:
     uses: ./.github/workflows/appimage.yml
     with:
       version: ${{ needs.setup.outputs.commit }}
+      runner: ${{ github.event.inputs.runner || 'depot-ubuntu-24.04-8' }}
 
   appimage:
     needs: [setup, build-appimage]
@@ -654,7 +665,7 @@ jobs:
           github.ref_name == 'main'
         )
       )
-    runs-on: namespace-profile-ghostty-sm
+    runs-on: ${{ github.event.inputs.runner || 'namespace-profile-ghostty-sm' }}
     env:
       GHOSTTY_BUILD: ${{ needs.setup.outputs.build }}
     steps:
