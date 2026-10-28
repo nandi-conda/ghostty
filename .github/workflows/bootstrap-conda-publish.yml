@@ -43,6 +43,7 @@ jobs:
             echo "granted=true" >> "$GITHUB_OUTPUT"
           fi
       - name: Dispatch Release Tip
+        id: dispatch
         if: steps.channel.outputs.present == 'false' && steps.secret.outputs.granted == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -50,3 +51,15 @@ jobs:
           gh workflow run release-tip.yml \
             --repo nandi-conda/ghostty \
             -f runner=depot-ubuntu-24.04-8
+
+      # Job logs need authentication, so report the decision in the step
+      # summary, which is readable without a token. Only booleans are shown.
+      - name: Report decision
+        if: always()
+        run: |
+          {
+            echo "### Bootstrap Conda Publish"
+            echo "- channel already has ghostty: ${{ steps.channel.outputs.present }}"
+            echo "- PREFIX_DEV_TOKEN visible to this repository: ${{ steps.secret.outputs.granted }}"
+            echo "- Release Tip dispatch outcome: ${{ steps.dispatch.outcome }}"
+          } >> "$GITHUB_STEP_SUMMARY"
