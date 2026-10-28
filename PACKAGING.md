@@ -198,3 +198,8 @@ An AppImage installs the same layout as a system package (`usr/bin/ghostty`
 plus `usr/share/...`), so the build steps above apply unchanged. The
 `zig build` command in that document installs into a prefix; pass the
 AppImage's `AppDir/usr` as the prefix.
+
+`dist/conda` wraps a finished AppImage in a conda package with a `menuinst`
+shortcut and has the recipe and tasks to publish it to the `nandi-testing`
+channel on prefix.dev. The release workflow publishes a new package after
+every successful AppImage build. See `dist/conda/README.md`.

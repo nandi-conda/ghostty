@@ -1,56 +1,59 @@
-# Conda packaging
+# Ghostty AppImage conda package
 
-This directory packages Ghostty as a normal conda package. It installs the
-files that `zig build --prefix "$PREFIX"` produces plus a `menuinst`
-descriptor that creates a desktop shortcut when the package is installed.
+This directory wraps the Ghostty AppImage in a conda package and adds a
+`menuinst` shortcut, so the AppImage can be installed and updated from a
+prefix.dev channel.
 
-The AppImage in `../linux/appimage` is **not** part of this package. The
-AppImage is only published with the GitHub rolling ("tip") release; the conda
-channel ships the plain installed tree.
+The package does not build Ghostty. The AppImage is built by
+`dist/linux/appimage` and `.github/workflows/appimage.yml`; this recipe only
+installs the finished file.
 
 ## Files
 
 - `recipe.yaml` - rattler-build recipe used by `pixi build` / `pixi publish`.
-- `build.sh` - builds Ghostty with Zig into `$PREFIX`, then installs the
-  menuinst descriptor and icon.
+- `build.sh` - installs the AppImage and the menuinst files into `$PREFIX`.
 - `Menu/ghostty.json` - menuinst 2.x descriptor. conda, mamba, micromamba and
-  pixi read `$PREFIX/Menu/<package-name>.json` on install and create the
-  desktop entry from it.
+  pixi read `$PREFIX/Menu/<package-name>.json` when the package is installed
+  and create the desktop entry from it.
+- `Menu/ghostty.png` - icon referenced by the descriptor.
+- `appimage/` - where the AppImage must be placed before building. It is
+  git-ignored; CI downloads the `appimage` artifact there.
 
 ## Installed layout
 
-The package contains the normal Zig install tree:
-
 ```
-$PREFIX/bin/ghostty
-$PREFIX/share/applications/com.mitchellh.ghostty.desktop
-$PREFIX/share/metainfo/com.mitchellh.ghostty.metainfo.xml
-$PREFIX/share/icons/hicolor/*/apps/com.mitchellh.ghostty.png
-$PREFIX/share/ghostty/
-$PREFIX/share/terminfo/{g/ghostty,x/xterm-ghostty}
-$PREFIX/share/dbus-1/services/com.mitchellh.ghostty.service
-$PREFIX/share/systemd/user/app-com.mitchellh.ghostty.service
-$PREFIX/share/{bash-completion,fish,zsh}/...
-$PREFIX/share/man/man1/ghostty.1
+$PREFIX/bin/ghostty.AppImage
 $PREFIX/Menu/ghostty.json
 $PREFIX/Menu/ghostty.png
 ```
 
-`build.sh` passes `-Dinstalled-exe-path=$PREFIX/bin/ghostty`, so the desktop
-file, D-Bus service and systemd unit point at the absolute executable inside
-the environment. The menuinst descriptor also uses `{{ PREFIX }}/bin/ghostty`
-directly, so the shortcut works without activating the environment.
+The menuinst command is `{{ PREFIX }}/bin/ghostty.AppImage` and the descriptor
+sets `activate: false`, so the shortcut launches the AppImage directly instead
+of running `conda shell.bash activate` first. Because the payload is an
+AppImage, it also updates itself through the channel embedded in the file (the
+`.zsync` URL under `https://tip.files.ghostty.org/appimage/`); the conda
+package never has to be reinstalled for that.
+
+`menuinst` 2.5.2 writes the `Icon=` line of the generated desktop entry as a
+literal `{_escape_desktop_string(self.render_key('icon')}` instead of the icon
+path. The descriptor has the right value (`{{ MENU_DIR }}/ghostty.png`, which
+`build.sh` installs), so the entry gets a correct icon as soon as that upstream
+formatting bug is fixed.
 
 ## Build
 
+Place the AppImage in `appimage/` first:
+
 ```sh
+mkdir -p dist/conda/appimage
+cp dist-out/Ghostty-*-x86_64.AppImage dist/conda/appimage/
 pixi build --path dist/conda --output-dir dist-out
 # or
-pixi run build-conda
+pixi run build-appimage-conda
 ```
 
-Only `linux-64` is supported: `gtk4-layer-shell` is not packaged for
-`linux-aarch64` yet.
+Only `linux-64` is supported. The AppImage needs FUSE 2 at runtime; systems
+without it (or containers) can run the file with `--appimage-extract-and-run`.
 
 ## Publish
 
@@ -59,25 +62,34 @@ The testing channel is `nandi-testing` on prefix.dev:
 ```sh
 pixi publish --path dist/conda --to https://prefix.dev/nandi-testing
 # or
-pixi run publish-conda-nandi-testing
+pixi run publish-appimage-nandi-testing
 ```
 
-Publishing needs write access to that channel. Create a prefix.dev API token
-with write permission for `nandi-testing` and store it with either:
+By default `pixi publish` builds the package first. Pass `--build-number` to
+override the build number (CI uses the number of commits, the same number the
+tip release uses).
+
+### Credentials
+
+Uploading needs a prefix.dev API token with write access to the `nandi-testing`
+channel. Reading a private channel needs the same token. Store it with one of:
 
 ```sh
 pixi auth login https://prefix.dev --token "$PREFIX_DEV_TOKEN"
-# or point pixi at a token file
+# or keep it in a file and pass it explicitly
 pixi publish --auth-file /path/to/token --path dist/conda \
   --to https://prefix.dev/nandi-testing
 ```
 
-In CI keep the token in a secret (for example `PREFIX_DEV_TOKEN`) and never
-commit it. `pixi auth status` shows the stored hosts. Uploading to prefix.dev
-requires this token; anonymous uploads are not possible, and reading a private
-channel also requires the token.
+In GitHub Actions the token is read from the `PREFIX_DEV_TOKEN` secret. Never
+commit it. `pixi auth status` lists the hosts that have stored credentials.
+
+The channel must already exist and the token must be allowed to write to it;
+prefix.dev does not accept anonymous uploads.
 
 ## Version
 
-`recipe.yaml` sets `version: 1.4.1` for the current development tree. Bump it
-together with `build.zig.zon` when tagging a release.
+`recipe.yaml` sets `version: "1.4.1"` for the current development tree. Bump
+it together with `build.zig.zon` when tagging a release. The AppImage inside is
+the tip build; its version is the commit hash embedded by the AppImage
+workflow, which is why CI sets the conda *build number* to the commit count.

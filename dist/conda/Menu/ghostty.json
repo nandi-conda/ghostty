@@ -5,16 +5,13 @@
         {
             "name": "Ghostty",
             "description": "A fast, native, feature-rich terminal emulator",
-            "command": [
-                "{{ PREFIX }}/bin/ghostty"
-            ],
             "icon": "{{ MENU_DIR }}/ghostty.{{ ICON_EXT }}",
+            "command": [
+                "{{ PREFIX }}/bin/ghostty.AppImage"
+            ],
+            "activate": false,
             "platforms": {
                 "linux": {
-                    "command": [
-                        "{{ PREFIX }}/bin/ghostty",
-                        "--gtk-single-instance=true"
-                    ],
                     "Categories": [
                         "System",
                         "TerminalEmulator"

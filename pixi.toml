@@ -4,7 +4,9 @@ channels = ["conda-forge"]
 platforms = ["linux-64", "linux-aarch64"]
 
 [tasks]
-build-conda = "pixi build --path dist/conda --output-dir dist-out"
-publish-conda-nandi-testing = "pixi publish --path dist/conda --to https://prefix.dev/nandi-testing"
+# Wrap the AppImage built by .github/workflows/appimage.yml in a conda package.
+# Put the AppImage in dist/conda/appimage/ first.
+build-appimage-conda = "pixi build --path dist/conda --output-dir dist-out"
+publish-appimage-nandi-testing = "pixi publish --path dist/conda --to https://prefix.dev/nandi-testing"
 
 [dependencies]
