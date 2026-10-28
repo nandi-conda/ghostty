@@ -18,6 +18,8 @@ crt_dir=${BUILD_PREFIX}/${HOST}/sysroot/usr/lib64
 msvc_lib_dir=
 kernel32_lib_dir=
 gcc_dir=${gcc_dir}
+darwin_sdk_dir=
+cc_dir=$(command -v "${HOST}-gcc")
 EOF
 
 # With --sysroot, Zig prefixes every -L path (including the conda host
