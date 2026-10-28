@@ -24,6 +24,8 @@ build:
   skip: not linux
   script:
     file: build.sh
+    env:
+      GHOSTTY_ZIG_CACHE: ${{ env.get("GHOSTTY_ZIG_CACHE", default="") }}
   # Zig fetches the dependencies pinned in build.zig.zon at build time.
   # Their hashes are pinned there, so the result is still reproducible.
 

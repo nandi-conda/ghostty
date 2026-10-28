@@ -7,7 +7,9 @@ set -euxo pipefail
 "${BUILD_PREFIX}/bin/python" -m pip install --no-deps --no-index \
     "${SRC_DIR}"/.wheels/blueprint_compiler-*.whl
 
-export ZIG_GLOBAL_CACHE_DIR="${SRC_DIR}/.zig-global-cache"
+# CI prefetches the Zig dependencies into GHOSTTY_ZIG_CACHE (see
+# .github/workflows/conda.yml); without it Zig downloads them here.
+export ZIG_GLOBAL_CACHE_DIR="${GHOSTTY_ZIG_CACHE:-${SRC_DIR}/.zig-global-cache}"
 export ZIG_LOCAL_CACHE_DIR="${SRC_DIR}/.zig-local-cache"
 export PKG_CONFIG_PATH="${PREFIX}/lib/pkgconfig:${PREFIX}/share/pkgconfig"
 export GI_TYPELIB_PATH="${BUILD_PREFIX}/lib/girepository-1.0"

@@ -41,8 +41,47 @@ jobs:
           pixi-version: v0.83.0
           run-install: false
 
+      # deps.files.ghostty.org sometimes stalls or drops a download midway.
+      # Fetch every Zig dependency up front, bounded and retried, into a
+      # cached directory that build.sh then uses, so the rattler-build step
+      # does not touch that host.
+      - name: Restore Zig dependencies
+        id: zig-deps
+        uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ${{ runner.temp }}/zig-global-cache/p
+          key: conda-zig-deps-${{ matrix.platform }}-0.17.0-${{ hashFiles('build.zig.zon', '**/build.zig.zon') }}
+          restore-keys: |
+            conda-zig-deps-${{ matrix.platform }}-0.17.0-
+
+      - name: Fetch Zig dependencies
+        shell: bash
+        timeout-minutes: 20
+        env:
+          ZIG_GLOBAL_CACHE_DIR: ${{ runner.temp }}/zig-global-cache
+        run: |
+          for attempt in 1 2 3 4; do
+            if timeout 300 pixi exec --spec zig==0.17.0 -- zig build --fetch=all; then
+              exit 0
+            fi
+            echo "::warning::zig build --fetch=all attempt $attempt failed"
+            sleep $((attempt * 10))
+          done
+          echo "::error::Fetching Zig dependencies failed after 4 attempts"
+          exit 1
+
+      - name: Save Zig dependencies
+        if: steps.zig-deps.outputs.cache-hit != 'true'
+        uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ${{ runner.temp }}/zig-global-cache/p
+          key: conda-zig-deps-${{ matrix.platform }}-0.17.0-${{ hashFiles('build.zig.zon', '**/build.zig.zon') }}
+
       - name: Build
         shell: bash
+        timeout-minutes: 60
+        env:
+          GHOSTTY_ZIG_CACHE: ${{ runner.temp }}/zig-global-cache
         run: |
           set +e
           GHOSTTY_CONDA_BUILD_NUMBER=$(git rev-list --count HEAD) \
