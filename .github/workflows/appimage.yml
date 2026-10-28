@@ -187,6 +187,12 @@ jobs:
               tail -n 200 /tmp/build.log
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
+            # Job logs and step summaries need authentication to read. The
+            # annotation below is visible without a token, so a failing fork
+            # build reports its error there too.
+            tail -n 15 /tmp/build.log | while IFS= read -r line; do
+              printf '::error::%s\n' "$(printf '%s' "$line" | sed 's/%/%25/g')"
+            done
           fi
           exit "$rc"
 
