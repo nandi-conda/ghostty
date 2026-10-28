@@ -668,14 +668,12 @@ jobs:
         with:
           pixi-version: v0.83.0
           run-install: false
-          auth-host: prefix.dev
-          auth-token: ${{ secrets.PREFIX_DEV_TOKEN }}
 
       - name: Publish to prefix.dev
+        env:
+          PREFIX_DEV_TOKEN: ${{ secrets.PREFIX_DEV_TOKEN }}
         run: |
-          pixi publish --path dist/conda \
-            --to https://prefix.dev/nandi-testing \
-            --build-number "$GHOSTTY_BUILD"
+          dist/conda/publish.sh --build-number "$GHOSTTY_BUILD"
 
   build-macos:
     needs: [setup]
