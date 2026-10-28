@@ -145,6 +145,11 @@ jobs:
           tar -xJf /tmp/zig.tar.xz -C /opt
           ln -s "/opt/zig-x86_64-linux-${ZIG_VERSION}/zig" /usr/local/bin/zig
           zig version
+          # Keep Zig's package cache inside the workspace so actions/cache can
+          # persist the fetched dependencies. This is set here rather than in
+          # env because github.workspace expands to the host path, not the
+          # container's.
+          echo "ZIG_GLOBAL_CACHE_DIR=$GITHUB_WORKSPACE/.zig-global-cache" >> "$GITHUB_ENV"
 
       - name: Install AppImage tools
         run: |
@@ -167,8 +172,46 @@ jobs:
             /opt/appimage/linuxdeploy-plugin-gtk.sh
           echo "/opt/appimage" >> "$GITHUB_PATH"
 
+      - name: Restore Zig dependencies
+        id: zig-deps
+        uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: .zig-global-cache/p
+          key: appimage-zig-deps-${{ env.ZIG_VERSION }}-${{ hashFiles('build.zig.zon', '**/build.zig.zon') }}
+          restore-keys: |
+            appimage-zig-deps-${{ env.ZIG_VERSION }}-
+
+      # deps.files.ghostty.org sometimes stalls or drops a download midway,
+      # which hung one build for 40 minutes and failed another with
+      # "unable to unpack tarball". Fetch every dependency, lazy ones
+      # included, up front with a bounded time per attempt and retries, so
+      # the build itself does not touch the network.
+      - name: Fetch Zig dependencies
+        shell: bash
+        timeout-minutes: 20
+        run: |
+          for attempt in 1 2 3 4; do
+            if timeout 300 zig build --fetch=all; then
+              exit 0
+            fi
+            echo "::warning::zig build --fetch=all attempt $attempt failed"
+            sleep $((attempt * 10))
+          done
+          echo "::error::Fetching Zig dependencies failed after 4 attempts"
+          exit 1
+
+      # Save right after fetching, so a later build failure still keeps the
+      # downloaded dependencies for the next run.
+      - name: Save Zig dependencies
+        if: steps.zig-deps.outputs.cache-hit != 'true'
+        uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: .zig-global-cache/p
+          key: ${{ steps.zig-deps.outputs.cache-primary-key }}
+
       - name: Build Ghostty
         shell: bash
+        timeout-minutes: 45
         run: |
           set +e
           args=(-Doptimize=ReleaseFast -Dcpu=baseline)
