@@ -685,7 +685,7 @@ jobs:
           pixi-version: v0.83.0
           run-install: false
           auth-host: prefix.dev
-          auth-token: ${{ secrets.PREFIX_DEV_TOKEN || secrets.PREFIX_API_KEY }}
+          auth-token: ${{ secrets.PREFIX_API_KEY || secrets.PREFIX_DEV_TOKEN }}
 
       - name: Publish to prefix.dev
         run: |
