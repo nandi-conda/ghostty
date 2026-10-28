@@ -122,6 +122,19 @@ jobs:
           PREFIX_API_KEY: ${{ secrets.PREFIX_API_KEY || secrets.PREFIX_DEV_TOKEN }}
         run: |
           shopt -s globstar
+          if [ -z "$PREFIX_API_KEY" ]; then
+            echo "::error::Neither PREFIX_API_KEY nor PREFIX_DEV_TOKEN is available to this job"
+            exit 1
+          fi
+          set +e
           pixi exec rattler-build upload prefix -c nandi-testing --skip-existing \
-            dist-out/conda/**/ghostty-*.conda
+            dist-out/conda/**/ghostty-*.conda 2>&1 | tee /tmp/upload.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            printf '::error title=prefix.dev upload::%s\n' \
+              "$(sed 's/\x1b\[[0-9;]*m//g' /tmp/upload.log | tail -n 25 | cut -c1-220 \
+                | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')"
+            exit "$rc"
+          fi
+          set -e
           echo "Published $(cd dist-out/conda && ls **/ghostty-*.conda)" >> "$GITHUB_STEP_SUMMARY"
