@@ -99,11 +99,11 @@ distributions with glibc 2.41 or newer (Debian 13, Ubuntu 25.04 and newer,
 Fedora 42 and newer).
 
 ```sh
+# Version used in the AppImage file name; any string works.
 version=$(git rev-parse --short HEAD)
 appdir="$PWD/AppDir"
 
 zig build --prefix "$appdir/usr" \
-  -Dversion-string="$version" \
   -Doptimize=ReleaseFast \
   -Dcpu=baseline
 
@@ -113,6 +113,9 @@ APPIMAGE_EXTRACT_AND_RUN=1 dist/linux/appimage/build-appimage.sh \
   --channel-base https://tip.files.ghostty.org/appimage \
   --output dist-out
 ```
+
+`-Dversion-string` is optional and must be a semantic version when given. Tip
+builds leave it out and keep the version from `build.zig.zon`.
 
 The install layout inside the AppDir is the normal Zig install layout that
 other packagers use:

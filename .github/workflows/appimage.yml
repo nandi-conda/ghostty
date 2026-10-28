@@ -24,6 +24,11 @@ on:
         description: "Version string embedded in the AppImage"
         type: string
         required: true
+      version-string:
+        description: "Semantic version for -Dversion-string; empty uses build.zig.zon"
+        type: string
+        required: false
+        default: ""
       channel-base:
         description: "Base URL of the AppImage update channel"
         type: string
@@ -41,6 +46,11 @@ on:
         description: "Version string embedded in the AppImage"
         type: string
         required: true
+      version-string:
+        description: "Semantic version for -Dversion-string; empty uses build.zig.zon"
+        type: string
+        required: false
+        default: ""
       channel-base:
         description: "Base URL of the AppImage update channel"
         type: string
@@ -64,6 +74,7 @@ env:
   LINUXDEPLOY_GTK_COMMIT: "7a3fbc31a9e5075073ff8790f26effbac5f84453"
   LINUXDEPLOY_GTK_SHA256: "b0f4cbc684a0103a9651f0955b635eaea0096b3a66c0f5a2c2aa337960375171"
   GHOSTTY_VERSION: ${{ inputs.version }}
+  GHOSTTY_VERSION_STRING: ${{ inputs.version-string }}
   CHANNEL_BASE: ${{ inputs.channel-base }}
 
 jobs:
@@ -165,12 +176,15 @@ jobs:
         shell: bash
         run: |
           set +e
-          zig build \
-            --prefix "$APPDIR/usr" \
-            -Dversion-string="$GHOSTTY_VERSION" \
-            -Doptimize=ReleaseFast \
-            -Dcpu=baseline > /tmp/build.log 2>&1
-          rc=$?
+          args=(-Doptimize=ReleaseFast -Dcpu=baseline)
+          # -Dversion-string must be a semantic version, so tip builds leave it
+          # unset and keep the version from build.zig.zon. A hash would make
+          # configuration fail.
+          if [ -n "$GHOSTTY_VERSION_STRING" ]; then
+            args+=("-Dversion-string=$GHOSTTY_VERSION_STRING")
+          fi
+          zig build --prefix "$APPDIR/usr" "${args[@]}" 2>&1 | tee /tmp/build.log
+          rc=${PIPESTATUS[0]}
           if [ "$rc" -ne 0 ]; then
             {
               echo '### Build Ghostty failed'
