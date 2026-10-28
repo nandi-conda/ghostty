@@ -69,6 +69,7 @@ if [ -z "$appdir" ] || [ -z "$version" ] || [ -z "$channel_base" ]; then
 fi
 
 appdir=$(cd "$appdir" && pwd)
+mkdir -p "$output_dir"
 output_dir=$(cd "$output_dir" && pwd)
 channel_base="${channel_base%/}"
 
