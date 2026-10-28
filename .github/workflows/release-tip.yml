@@ -641,6 +641,8 @@ jobs:
   # Wrap the AppImage in a conda package with a menuinst shortcut and upload
   # it to the testing channel on prefix.dev. The package does not rebuild the
   # app: dist/conda only installs the AppImage that build-appimage produced.
+  # The conda build number is the commit count, so every tip run uploads a new
+  # package file instead of rebuilding the one already on the channel.
   appimage-conda:
     needs: [setup, build-appimage]
     if: |

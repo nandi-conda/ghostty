@@ -17,7 +17,10 @@ source:
   - path: ../../LICENSE
 
 build:
-  number: 0
+  # pixi publish's --build-number never reaches rattler-build for recipe-based
+  # packages, so the number comes from the environment. publish.sh sets it
+  # from its own --build-number; CI uses the tip build number (commit count).
+  number: ${{ env.get("GHOSTTY_CONDA_BUILD_NUMBER", default="0") }}
   script:
     file: build.sh
 

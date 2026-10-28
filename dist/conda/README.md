@@ -17,7 +17,12 @@ installs the finished file.
   and create the desktop entry from it.
 - `Menu/ghostty.png` - icon referenced by the descriptor.
 - `appimage/` - where the AppImage must be placed before building. It is
-  git-ignored; CI downloads the `appimage` artifact there.
+  git-ignored. The `appimage-conda` job in `.github/workflows/release-tip.yml`
+  downloads the `appimage` artifact into this directory; `build-appimage`
+  uploads it in the same workflow run. The artifact holds the versioned pair
+  `Ghostty-<commit>-x86_64.AppImage` (plus `.zsync`) and the channel pair
+  `Ghostty-x86_64.AppImage` (plus `.zsync`). `build.sh` and `publish.sh` use
+  the versioned AppImage.
 
 ## Installed layout
 
@@ -52,6 +57,20 @@ pixi build --path dist/conda --output-dir dist-out
 pixi run build-appimage-conda
 ```
 
+The recipe's build number comes from `GHOSTTY_CONDA_BUILD_NUMBER` and defaults
+to 0. Give local builds a number that grows between uploads, for example the
+commit count, so the channel keeps the earlier packages:
+
+```sh
+GHOSTTY_CONDA_BUILD_NUMBER=$(git rev-list --count HEAD) \
+  pixi build --path dist/conda --output-dir dist-out
+```
+
+pixi reuses the previous build directory when the recipe and sources did not
+change, and that reuse keeps the old build number. Pass `--clean` (which
+`publish.sh` forwards to `pixi publish`) after changing the number. CI starts
+with an empty build directory, so it always rebuilds.
+
 Only `linux-64` is supported. The AppImage needs FUSE 2 at runtime; systems
 without it (or containers) can run the file with `--appimage-extract-and-run`.
 
@@ -67,8 +86,12 @@ pixi run publish-appimage-nandi-testing
 
 `publish.sh` checks for the AppImage, then runs
 `pixi publish --path dist/conda --to https://prefix.dev/nandi-testing`.
-It builds the package first; pass `--build-number` to override the build
-number (CI uses the number of commits, the same number the tip release uses).
+It builds the package first. Pass `--build-number <n>` to set the package build
+number: the script exports it as `GHOSTTY_CONDA_BUILD_NUMBER` for the recipe,
+because `pixi publish --build-number` never reaches rattler-build for recipe
+packages. CI passes the commit count, the same number the tip release uses, so
+each tip run publishes a new `ghostty-<version>-<build string>_<n>.conda`
+instead of building the file that is already on the channel.
 
 ### Credentials
 
